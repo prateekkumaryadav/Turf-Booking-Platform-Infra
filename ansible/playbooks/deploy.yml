@@ -37,12 +37,11 @@
 
     # ------- Pull Latest Docker Images -------
     - name: Pull latest Docker images
-      ansible.builtin.command: docker compose -f {{ compose_file }} pull --ignore-pull-failures
+      ansible.builtin.command: docker compose -f {{ compose_file }} pull
       args:
         chdir: "{{ app_dir }}"
       register: pull_result
       changed_when: "'Downloaded' in pull_result.stdout or 'Pull complete' in pull_result.stdout"
-      failed_when: false
 
     # ------- Deploy the Application -------
     - name: Ensure mongo volume exists (creates basic volume structure if missing)
