@@ -21,7 +21,7 @@ services:
     image: prateekkumaryadav/turf-api-gateway:latest
     container_name: turf_api_gateway
     ports:
-      - "5000:5000"
+      - "5004:5000"
     environment:
       - PORT=5000
       - AUTH_SERVICE_URL=http://auth-service:5001
