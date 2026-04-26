@@ -88,7 +88,7 @@
     # ------- Health Checks -------
     - name: Verify API Gateway is responding
       ansible.builtin.uri:
-        url: "http://localhost:5000"
+        url: "http://localhost:5004"
         method: GET
         status_code: [200]
         timeout: 10
