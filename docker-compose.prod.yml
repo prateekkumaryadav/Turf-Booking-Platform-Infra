@@ -2,24 +2,38 @@ services:
   mongodb:
     image: mongo:latest
     container_name: turf_mongodb
+    restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:
       - turf_mongodb_data:/data/db
     networks:
       - turf_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:alpine
     container_name: turf_redis
+    restart: unless-stopped
     ports:
       - "6380:6379"
     networks:
       - turf_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api-gateway:
     image: prateekkumaryadav/turf-api-gateway:latest
     container_name: turf_api_gateway
+    restart: unless-stopped
     ports:
       - "5004:5000"
     environment:
@@ -28,15 +42,19 @@ services:
       - TURF_SERVICE_URL=http://turf-service:5002
       - BOOKING_SERVICE_URL=http://booking-service:5003
     depends_on:
-      - auth-service
-      - turf-service
-      - booking-service
+      auth-service:
+        condition: service_started
+      turf-service:
+        condition: service_started
+      booking-service:
+        condition: service_started
     networks:
       - turf_network
 
   auth-service:
     image: prateekkumaryadav/turf-auth-service:latest
     container_name: turf_auth_service
+    restart: unless-stopped
     ports:
       - "5001:5001"
     environment:
@@ -46,13 +64,15 @@ services:
     env_file:
       - .env
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - turf_network
 
   turf-service:
     image: prateekkumaryadav/turf-turf-service:latest
     container_name: turf_turf_service
+    restart: unless-stopped
     ports:
       - "5002:5002"
     environment:
@@ -61,13 +81,15 @@ services:
     env_file:
       - .env
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - turf_network
 
   booking-service:
     image: prateekkumaryadav/turf-booking-service:latest
     container_name: turf_booking_service
+    restart: unless-stopped
     ports:
       - "5003:5003"
     environment:
@@ -77,14 +99,17 @@ services:
     env_file:
       - .env
     depends_on:
-      - mongodb
-      - redis
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - turf_network
 
   frontend:
     image: prateekkumaryadav/turf-frontend:latest
     container_name: turf_frontend
+    restart: unless-stopped
     ports:
       - "80:80"
       - "5173:80"

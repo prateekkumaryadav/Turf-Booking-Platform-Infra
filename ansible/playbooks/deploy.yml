@@ -35,6 +35,13 @@
         dest: "{{ app_dir }}/.env"
         mode: "0600"
 
+    # ------- Ensure MongoDB Volume Exists -------
+    - name: Ensure mongo volume exists
+      ansible.builtin.command: docker volume create turf_mongodb_data
+      register: volume_result
+      changed_when: "'Created' in volume_result.stdout"
+      failed_when: false
+
     # ------- Pull Latest Docker Images -------
     - name: Pull latest Docker images
       ansible.builtin.command: docker compose -f {{ compose_file }} pull --ignore-pull-failures
@@ -44,30 +51,18 @@
       changed_when: "'Downloaded' in pull_result.stdout or 'Pull complete' in pull_result.stdout"
       failed_when: false
 
-    # ------- Deploy the Application -------
-    - name: Ensure mongo volume exists (creates basic volume structure if missing)
-      ansible.builtin.command: docker volume create turf_mongodb_data
-      failed_when: false
-      
-    - name: Stop existing containers (if running)
-      ansible.builtin.command: docker compose -f {{ compose_file }} down
-      args:
-        chdir: "{{ app_dir }}"
-      register: stop_result
-      changed_when: "'Removed' in stop_result.stdout"
-      failed_when: false
-
-    - name: Start application stack
-      ansible.builtin.command: docker compose -f {{ compose_file }} up -d
+    # ------- Deploy the Application (rolling update, no downtime) -------
+    - name: Start/Update application stack
+      ansible.builtin.command: docker compose -f {{ compose_file }} up -d --remove-orphans
       args:
         chdir: "{{ app_dir }}"
       register: deploy_result
       changed_when: "'Started' in deploy_result.stdout or 'Created' in deploy_result.stdout"
 
     # ------- Verify Deployment -------
-    - name: Wait for containers to start
+    - name: Wait for all containers to become healthy
       ansible.builtin.pause:
-        seconds: 15
+        seconds: 20
 
     - name: Check running containers
       ansible.builtin.command: docker compose -f {{ compose_file }} ps
@@ -84,6 +79,29 @@
           ========================================
           {{ container_status.stdout }}
           ========================================
+
+    # ------- Seed Database (only if empty) -------
+    - name: Check if database has been seeded
+      ansible.builtin.command: >
+        docker exec turf_mongodb mongosh --quiet --eval
+        "db = db.getSiblingDB('turf_booking'); db.users.countDocuments()"
+      register: user_count
+      changed_when: false
+      failed_when: false
+
+    - name: Seed database with initial data
+      ansible.builtin.command: >
+        docker run --rm --network turf_network
+        -e MONGO_URI=mongodb://mongodb:27017/turf_booking
+        node:22-alpine sh -c
+        "apk add --no-cache git && git clone https://github.com/prateekkumaryadav/Turf-Booking-Platform-Backend.git /app && cd /app && npm install --production mongoose bcryptjs dotenv && node seed.js"
+      when: user_count.stdout is defined and user_count.stdout | trim == "0"
+      register: seed_result
+      failed_when: false
+
+    - name: Display seed result
+      ansible.builtin.debug:
+        msg: "{{ seed_result.stdout | default('Database already seeded — skipping') }}"
 
     # ------- Health Checks -------
     - name: Verify API Gateway is responding
