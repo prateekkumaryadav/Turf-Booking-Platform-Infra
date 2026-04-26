@@ -47,6 +47,26 @@ MONGO_URI=mongodb://localhost:27017/turf_booking node seed.js
 
 ## Production Deployment
 
+We use Kubernetes as the primary deployment target, keeping Ansible in parallel as a safety backup for VM-based setups.
+
+### Deploying to Kubernetes (Primary)
+
+Apply the Kubernetes manifests using Kustomize from the `k8s/` directory:
+
+```bash
+kubectl apply -k k8s/
+```
+
+Check the status of your services:
+
+```bash
+kubectl get all -n turf-platform
+```
+
+### Deploying via Ansible (Safety Backup)
+
+If you need to deploy directly to VMs, use the safety fallback Ansible playbooks:
+
 ```bash
 # One-time server setup
 ansible-playbook ansible/playbooks/setup-server.yml
