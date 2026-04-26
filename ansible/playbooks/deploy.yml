@@ -1,0 +1,155 @@
+---
+# ============================================================
+# Playbook: deploy.yml
+# Purpose:  Deploy the Turf Booking Platform microservices
+#           using Docker Compose on the target server.
+# Usage:    ansible-playbook ansible/playbooks/deploy.yml
+# ============================================================
+
+- name: Deploy Turf Booking Platform (Microservices)
+  hosts: webservers
+  become: false
+
+  vars:
+    app_dir: "~/turf-booking"
+    compose_file: docker-compose.prod.yml
+
+  tasks:
+    # ------- Prepare App Directory -------
+    - name: Create application directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    # ------- Copy Deployment Files -------
+    - name: Copy docker-compose.prod.yml to remote host
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../docker-compose.prod.yml"
+        dest: "{{ app_dir }}/docker-compose.prod.yml"
+        mode: "0644"
+
+    - name: Copy environment file to remote host
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../.env"
+        dest: "{{ app_dir }}/.env"
+        mode: "0600"
+
+    # ------- Pull Latest Docker Images -------
+    - name: Pull latest Docker images
+      ansible.builtin.command: docker compose -f {{ compose_file }} pull
+      args:
+        chdir: "{{ app_dir }}"
+      register: pull_result
+      changed_when: "'Downloaded' in pull_result.stdout or 'Pull complete' in pull_result.stdout"
+
+    # ------- Deploy the Application -------
+    - name: Ensure mongo volume exists (creates basic volume structure if missing)
+      ansible.builtin.command: docker volume create turf_mongodb_data
+      failed_when: false
+      
+    - name: Stop existing containers (if running)
+      ansible.builtin.command: docker compose -f {{ compose_file }} down
+      args:
+        chdir: "{{ app_dir }}"
+      register: stop_result
+      changed_when: "'Removed' in stop_result.stdout"
+      failed_when: false
+
+    - name: Start application stack
+      ansible.builtin.command: docker compose -f {{ compose_file }} up -d
+      args:
+        chdir: "{{ app_dir }}"
+      register: deploy_result
+      changed_when: "'Started' in deploy_result.stdout or 'Created' in deploy_result.stdout"
+
+    # ------- Verify Deployment -------
+    - name: Wait for containers to start
+      ansible.builtin.pause:
+        seconds: 15
+
+    - name: Check running containers
+      ansible.builtin.command: docker compose -f {{ compose_file }} ps
+      args:
+        chdir: "{{ app_dir }}"
+      register: container_status
+      changed_when: false
+
+    - name: Display deployment status
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          Deployment Complete!
+          ========================================
+          {{ container_status.stdout }}
+          ========================================
+
+    # ------- Health Checks -------
+    - name: Verify API Gateway is responding
+      ansible.builtin.uri:
+        url: "http://localhost:5000"
+        method: GET
+        status_code: [200]
+        timeout: 10
+      register: gateway_health
+      retries: 3
+      delay: 5
+      until: gateway_health is succeeded
+      failed_when: false
+
+    - name: Verify Auth Service is responding
+      ansible.builtin.uri:
+        url: "http://localhost:5001"
+        method: GET
+        status_code: [200]
+        timeout: 10
+      register: auth_health
+      retries: 3
+      delay: 5
+      until: auth_health is succeeded
+      failed_when: false
+
+    - name: Verify Turf Service is responding
+      ansible.builtin.uri:
+        url: "http://localhost:5002"
+        method: GET
+        status_code: [200]
+        timeout: 10
+      register: turf_health
+      retries: 3
+      delay: 5
+      until: turf_health is succeeded
+      failed_when: false
+
+    - name: Verify Booking Service is responding
+      ansible.builtin.uri:
+        url: "http://localhost:5003"
+        method: GET
+        status_code: [200]
+        timeout: 10
+      register: booking_health
+      retries: 3
+      delay: 5
+      until: booking_health is succeeded
+      failed_when: false
+
+    - name: Verify Frontend is responding
+      ansible.builtin.uri:
+        url: "http://localhost:80"
+        method: GET
+        status_code: 200
+        timeout: 10
+      register: frontend_health
+      retries: 3
+      delay: 5
+      until: frontend_health is succeeded
+      failed_when: false
+
+    - name: Display health check results
+      ansible.builtin.debug:
+        msg: |
+          API Gateway:     {{ 'HEALTHY' if gateway_health is succeeded else 'UNHEALTHY' }}
+          Auth Service:    {{ 'HEALTHY' if auth_health is succeeded else 'UNHEALTHY' }}
+          Turf Service:    {{ 'HEALTHY' if turf_health is succeeded else 'UNHEALTHY' }}
+          Booking Service: {{ 'HEALTHY' if booking_health is succeeded else 'UNHEALTHY' }}
+          Frontend:        {{ 'HEALTHY' if frontend_health is succeeded else 'UNHEALTHY' }}

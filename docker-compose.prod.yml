@@ -1,0 +1,102 @@
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: turf_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - turf_mongodb_data:/data/db
+    networks:
+      - turf_network
+
+  redis:
+    image: redis:alpine
+    container_name: turf_redis
+    ports:
+      - "6380:6379"
+    networks:
+      - turf_network
+
+  api-gateway:
+    image: prateekkumaryadav/turf-api-gateway:latest
+    container_name: turf_api_gateway
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - TURF_SERVICE_URL=http://turf-service:5002
+      - BOOKING_SERVICE_URL=http://booking-service:5003
+    depends_on:
+      - auth-service
+      - turf-service
+      - booking-service
+    networks:
+      - turf_network
+
+  auth-service:
+    image: prateekkumaryadav/turf-auth-service:latest
+    container_name: turf_auth_service
+    ports:
+      - "5001:5001"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/turf_booking
+      - PORT=5001
+      - CLIENT_URL=http://localhost
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+    networks:
+      - turf_network
+
+  turf-service:
+    image: prateekkumaryadav/turf-turf-service:latest
+    container_name: turf_turf_service
+    ports:
+      - "5002:5002"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/turf_booking
+      - PORT=5002
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+    networks:
+      - turf_network
+
+  booking-service:
+    image: prateekkumaryadav/turf-booking-service:latest
+    container_name: turf_booking_service
+    ports:
+      - "5003:5003"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/turf_booking
+      - PORT=5003
+      - REDIS_URI=redis://redis:6379
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - turf_network
+
+  frontend:
+    image: prateekkumaryadav/turf-frontend:latest
+    container_name: turf_frontend
+    ports:
+      - "80:80"
+      - "5173:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - turf_network
+
+volumes:
+  turf_mongodb_data:
+    external: true
+
+networks:
+  turf_network:
+    driver: bridge

@@ -1,0 +1,16 @@
+# Environment variables
+.env
+.env.test
+.env.production
+
+# OS/Mac specific
+.DS_Store
+Thumbs.db
+
+# IDEs and Editors
+.vscode/
+.idea/
+
+# Ansible
+*.retry
+ansible/vault_password.txt
