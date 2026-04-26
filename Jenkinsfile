@@ -18,7 +18,7 @@ pipeline {
                 sh 'docker compose -f docker-compose.yml config --quiet || echo "Dev compose validation completed"'
                 sh 'docker compose -f docker-compose.prod.yml config --quiet || echo "Prod compose validation completed"'
             }
-        }
+        } 
 
         stage('Deploy with Ansible') {
             steps {
