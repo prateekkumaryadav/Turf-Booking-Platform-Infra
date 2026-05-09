@@ -29,6 +29,9 @@ This repository contains the deployment configuration for the Turf Booking Platf
 | Turf Service | `prateekkumaryadav/turf-turf-service` | 5002 |
 | Booking Service | `prateekkumaryadav/turf-booking-service` | 5003 |
 | Frontend | `prateekkumaryadav/turf-frontend` | 80, 5173 |
+| Prometheus | `prom/prometheus:v2.47.0` | 30090 (NodePort) |
+| Grafana | `grafana/grafana:10.1.0` | 30030 (NodePort) |
+| Loki | `grafana/loki:2.9.1` | 3100 |
 
 ## Quick Start (Development)
 
@@ -61,7 +64,18 @@ Check the status of your services:
 
 ```bash
 kubectl get all -n turf-platform
+kubectl get all -n monitoring
+kubectl get all -n logging
 ```
+
+### Accessing Monitoring Dashboards
+
+- **Grafana**: Available at `http://<node-ip>:30030` (Default: `admin`/`admin`)
+- **Prometheus**: Available at `http://<node-ip>:30090`
+
+The Grafana instance is pre-provisioned with:
+- **Prometheus** and **Loki** datasources.
+- **Turf Booking Platform** overview dashboard for CPU, Memory, and Logs.
 
 ### Deploying via Ansible (Safety Backup)
 
