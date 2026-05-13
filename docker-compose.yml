@@ -10,6 +10,10 @@ services:
       - mongodb_data:/data/db
     networks:
       - turf_network
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
 
   redis:
     image: redis:alpine
@@ -57,6 +61,10 @@ services:
       - mongodb
     networks:
       - turf_network
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
 
   turf-service:
     build:
@@ -75,6 +83,10 @@ services:
       - mongodb
     networks:
       - turf_network
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
 
   booking-service:
     build:
@@ -95,6 +107,10 @@ services:
       - redis
     networks:
       - turf_network
+    logging:
+      driver: gelf
+      options:
+        gelf-address: "udp://127.0.0.1:12201"
 
   frontend:
     build:
