@@ -44,8 +44,12 @@
   failed_when: false
   changed_when: false
 
+- name: Forcefully stop and remove conflicting containers
+  ansible.builtin.shell: docker rm -f turf_mongodb turf_redis turf_api_gateway turf_auth_service turf_turf_service turf_booking_service turf_frontend || true
+  failed_when: false
+  changed_when: false
 - name: Stop existing containers (if running)
-  ansible.builtin.command: docker compose -f {{ docker_compose_file }} down
+  ansible.builtin.command: docker compose -f {{ docker_compose_file }} down --remove-orphans
   args:
     chdir: "{{ docker_app_dir }}"
   register: stop_result
