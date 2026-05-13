@@ -1,0 +1,45 @@
+---
+# ============================================================
+# Non-secret variables — references vault-encrypted secrets
+# ============================================================
+# This file maps application variables to their vault-encrypted
+# counterparts. This separation follows Ansible best practices:
+#   - vault_vars.yml → encrypted, contains raw secrets
+#   - vars.yml       → plaintext, references vault vars
+# ============================================================
+
+# --- Application Secrets (from vault) ---
+app_jwt_secret: "{{ vault_jwt_secret }}"
+app_session_secret: "{{ vault_session_secret }}"
+app_google_client_id: "{{ vault_google_client_id }}"
+app_google_client_secret: "{{ vault_google_client_secret }}"
+app_mongo_root_username: "{{ vault_mongo_root_username }}"
+app_mongo_root_password: "{{ vault_mongo_root_password }}"
+app_grafana_admin_password: "{{ vault_grafana_admin_password }}"
+
+# --- Application Configuration ---
+app_namespace: "turf-platform"
+app_docker_registry: "prateekkumaryadav"
+app_image_tag: "latest"
+
+# --- Service Ports ---
+api_gateway_port: 5000
+auth_service_port: 5001
+turf_service_port: 5002
+booking_service_port: 5003
+frontend_port: 80
+
+# --- MongoDB ---
+mongo_uri: "mongodb://mongodb:27017/turf_booking"
+mongo_data_storage: "2Gi"
+
+# --- Redis ---
+redis_uri: "redis://redis:6379"
+
+# --- HPA Configuration ---
+hpa_min_replicas: 1
+hpa_max_replicas_backend: 4
+hpa_max_replicas_gateway: 5
+hpa_max_replicas_frontend: 3
+hpa_target_cpu_percent: 70
+hpa_target_cpu_percent_frontend: 80
