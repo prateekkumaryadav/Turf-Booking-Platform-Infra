@@ -1,0 +1,32 @@
+---
+# ============================================================
+# Ansible Vault Encrypted Variables
+# ============================================================
+# This file contains sensitive credentials and must be encrypted.
+#
+# To encrypt:
+#   ansible-vault encrypt ansible/group_vars/all/vault_vars.yml
+#
+# To edit after encryption:
+#   ansible-vault edit ansible/group_vars/all/vault_vars.yml
+#
+# To view after encryption:
+#   ansible-vault view ansible/group_vars/all/vault_vars.yml
+# ============================================================
+
+# JWT Secret (shared across auth, turf, and booking services)
+vault_jwt_secret: "your_jwt_secret_here"
+
+# Session secret for auth service
+vault_session_secret: "your_session_secret_here"
+
+# Google OAuth credentials (auth service only)
+vault_google_client_id: "your_google_client_id"
+vault_google_client_secret: "your_google_client_secret"
+
+# MongoDB credentials (if authentication is enabled)
+vault_mongo_root_username: "admin"
+vault_mongo_root_password: "your_mongo_password_here"
+
+# Grafana admin password
+vault_grafana_admin_password: "admin"
