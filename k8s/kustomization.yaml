@@ -10,6 +10,7 @@ resources:
   - turf-service.yaml
   - booking-service.yaml
   - frontend.yaml
+  - hpa.yaml
 
 # Create a separate kustomization or use kubectl apply directly for monitoring/logging
 # to avoid namespace conflicts caused by the top-level 'namespace: turf-platform'

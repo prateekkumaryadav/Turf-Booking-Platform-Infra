@@ -27,6 +27,16 @@ spec:
           value: "http://turf-service:5002"
         - name: BOOKING_SERVICE_URL
           value: "http://booking-service:5003"
+        envFrom:
+        - secretRef:
+            name: turf-app-secrets
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
 ---
 apiVersion: v1
 kind: Service

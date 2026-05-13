@@ -25,6 +25,16 @@ spec:
           value: "mongodb://mongodb:27017/turf_booking"
         - name: CLIENT_URL
           value: ""
+        envFrom:
+        - secretRef:
+            name: turf-app-secrets
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
 ---
 apiVersion: v1
 kind: Service
