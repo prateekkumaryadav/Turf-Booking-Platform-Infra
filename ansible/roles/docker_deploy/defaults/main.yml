@@ -1,0 +1,22 @@
+---
+# ============================================================
+# Role: docker_deploy — Default Variables
+# ============================================================
+
+# Working directory on the target host
+docker_app_dir: "~/turf-booking"
+
+# Docker Compose file to use
+docker_compose_file: "docker-compose.prod.yml"
+
+# Path to compose file relative to the playbook
+compose_src: "{{ playbook_dir }}/../../docker-compose.prod.yml"
+
+# Path to .env template source
+env_src: "{{ playbook_dir }}/../../.env"
+
+# Health check configuration
+health_check_retries: 3
+health_check_delay: 5
+health_check_timeout: 10
+startup_wait_seconds: 15

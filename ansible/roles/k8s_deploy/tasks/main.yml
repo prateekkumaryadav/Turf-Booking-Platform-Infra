@@ -1,0 +1,137 @@
+---
+# ============================================================
+# Role: k8s_deploy — Main Tasks
+# ============================================================
+# Deploys the Turf Booking Platform to Kubernetes by:
+#   1. Rendering K8s secrets from Ansible Vault variables
+#   2. Applying core manifests via Kustomize
+#   3. Deploying monitoring & logging stacks
+#   4. Verifying pod readiness across all namespaces
+# ============================================================
+
+# ------- Prepare Working Directory -------
+- name: Create K8s application directory
+  ansible.builtin.file:
+    path: "{{ k8s_app_dir }}"
+    state: directory
+    mode: "0755"
+
+# ------- Copy K8s Manifests -------
+- name: Copy K8s manifests directory
+  ansible.builtin.copy:
+    src: "{{ k8s_manifests_src }}"
+    dest: "{{ k8s_app_dir }}/"
+    mode: "0644"
+
+# ------- Render & Apply Secrets from Vault -------
+- name: Render K8s secrets from Ansible Vault
+  ansible.builtin.template:
+    src: app-secrets.yaml.j2
+    dest: "{{ k8s_app_dir }}/k8s/app-secrets.yaml"
+    mode: "0600"
+
+- name: Apply K8s secrets
+  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/app-secrets.yaml
+  register: secrets_result
+  changed_when: "'created' in secrets_result.stdout or 'configured' in secrets_result.stdout"
+
+# ------- Deploy Core Application (Kustomize) -------
+- name: Apply Kubernetes manifests using Kustomize
+  ansible.builtin.command: kubectl apply -k {{ k8s_app_dir }}/k8s/
+  register: k8s_deploy_result
+  changed_when: "'created' in k8s_deploy_result.stdout or 'configured' in k8s_deploy_result.stdout"
+
+- name: Display Kustomize apply output
+  ansible.builtin.debug:
+    msg: "{{ k8s_deploy_result.stdout }}"
+
+# ------- Deploy Monitoring Stack -------
+- name: Deploy Monitoring Stack (Prometheus & Grafana)
+  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/monitoring/monitoring.yaml
+  register: monitoring_result
+  changed_when: "'created' in monitoring_result.stdout or 'configured' in monitoring_result.stdout"
+  when: deploy_monitoring
+
+# ------- Deploy Logging Stack -------
+- name: Deploy Logging Namespace
+  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/logging/namespace.yaml
+  register: logging_ns_result
+  changed_when: "'created' in logging_ns_result.stdout or 'configured' in logging_ns_result.stdout"
+  when: deploy_logging
+
+- name: Deploy Loki (Log Storage)
+  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/logging/loki.yaml
+  register: loki_result
+  changed_when: "'created' in loki_result.stdout or 'configured' in loki_result.stdout"
+  when: deploy_logging
+
+- name: Deploy Promtail (Log Collector)
+  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/logging/promtail.yaml
+  register: promtail_result
+  changed_when: "'created' in promtail_result.stdout or 'configured' in promtail_result.stdout"
+  when: deploy_logging
+
+# ------- Enable Metrics Server (required for HPA) -------
+- name: Enable Minikube metrics-server addon (if using Minikube)
+  ansible.builtin.command: minikube addons enable metrics-server
+  failed_when: false
+  changed_when: false
+  when: enable_minikube_metrics
+
+# ------- Clean Up Rendered Secrets -------
+- name: Remove rendered secrets file from disk
+  ansible.builtin.file:
+    path: "{{ k8s_app_dir }}/k8s/app-secrets.yaml"
+    state: absent
+
+# ------- Verify Deployment -------
+- name: Wait for pods to become ready
+  ansible.builtin.pause:
+    seconds: "{{ pod_ready_wait }}"
+
+- name: Check turf-platform pods
+  ansible.builtin.command: kubectl get pods -n turf-platform
+  register: platform_pods
+  changed_when: false
+
+- name: Check monitoring pods
+  ansible.builtin.command: kubectl get pods -n monitoring
+  register: monitoring_pods
+  changed_when: false
+  when: deploy_monitoring
+
+- name: Check logging pods
+  ansible.builtin.command: kubectl get pods -n logging
+  register: logging_pods
+  changed_when: false
+  when: deploy_logging
+
+- name: Check HPA status
+  ansible.builtin.command: kubectl get hpa -n turf-platform
+  register: hpa_status
+  changed_when: false
+
+- name: Display deployment status
+  ansible.builtin.debug:
+    msg: |
+      ========================================
+      Kubernetes Deployment Complete!
+      ========================================
+
+      --- turf-platform (App Services) ---
+      {{ platform_pods.stdout }}
+
+      --- HPA (Horizontal Pod Autoscalers) ---
+      {{ hpa_status.stdout }}
+
+      --- monitoring (Prometheus, Grafana) ---
+      {{ monitoring_pods.stdout | default('Skipped') }}
+
+      --- logging (Loki, Promtail) ---
+      {{ logging_pods.stdout | default('Skipped') }}
+
+      ========================================
+      Access Points:
+        Grafana:    http://<node-ip>:30030 (admin/admin)
+        Prometheus: http://<node-ip>:30090
+      ========================================
