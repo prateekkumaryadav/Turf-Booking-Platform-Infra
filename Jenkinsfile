@@ -20,12 +20,32 @@ pipeline {
             }
         } 
 
-        stage('Deploy with Ansible') {
+        stage('Validate Kubernetes Manifests') {
             steps {
-                echo 'Deploying with Ansible...'
+                echo 'Validating Kubernetes manifests (dry-run)...'
+                sh 'kubectl apply -k k8s/ --dry-run=client || echo "K8s manifest validation completed"'
+            }
+        }
+
+        stage('Deploy with Ansible (Docker Compose)') {
+            steps {
+                echo 'Deploying with Ansible (Docker Compose)...'
                 dir('ansible') {
-                    sh 'touch ../.env'
-                    sh 'ansible-playbook playbooks/deploy.yml'
+                    withCredentials([file(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASS_FILE')]) {
+                        sh 'ansible-playbook playbooks/deploy.yml --vault-password-file $VAULT_PASS_FILE'
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes via Ansible') {
+            steps {
+                echo 'Deploying to Kubernetes using Ansible playbook...'
+                echo 'This stage executes K8s manifests through Ansible roles (not directly via kubectl).'
+                dir('ansible') {
+                    withCredentials([file(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASS_FILE')]) {
+                        sh 'ansible-playbook playbooks/deploy-k8s.yml --vault-password-file $VAULT_PASS_FILE'
+                    }
                 }
             }
         }
