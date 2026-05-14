@@ -36,10 +36,12 @@ services:
       - AUTH_SERVICE_URL=http://auth-service:5001
       - TURF_SERVICE_URL=http://turf-service:5002
       - BOOKING_SERVICE_URL=http://booking-service:5003
+      - REDIS_URL=redis://redis:6379
     depends_on:
       - auth-service
       - turf-service
       - booking-service
+      - redis
     networks:
       - turf_network
 
