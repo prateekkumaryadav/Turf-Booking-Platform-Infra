@@ -11,10 +11,12 @@ resources:
   - booking-service.yaml
   - frontend.yaml
   - hpa.yaml
-
-# Create a separate kustomization or use kubectl apply directly for monitoring/logging
-# to avoid namespace conflicts caused by the top-level 'namespace: turf-platform'
-# - monitoring/monitoring.yaml
-# - logging/namespace.yaml
-# - logging/loki.yaml
-# - logging/promtail.yaml
+  # Create a separate kustomization or use kubectl apply directly for monitoring/logging
+  # to avoid namespace conflicts caused by the top-level 'namespace: turf-platform'
+  - logging/namespace.yaml
+  - logging/loki.yaml
+  - logging/promtail.yaml
+  - logging/elk/namespace.yaml
+  - logging/elk/elasticsearch.yaml
+  - logging/elk/kibana.yaml
+  - logging/elk/filebeat.yaml

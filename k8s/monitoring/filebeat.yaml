@@ -22,6 +22,12 @@ data:
             matchers:
             - logs_path:
                 logs_path: "/var/log/containers/"
+        - decode_json_fields:
+            fields: ["message"]
+            target: "app"
+            overwrite_keys: true
+            process_array: false
+            max_depth: 1
 
     output.elasticsearch:
       hosts: ['${ELASTICSEARCH_HOST:elasticsearch}:${ELASTICSEARCH_PORT:9200}']
@@ -56,7 +62,7 @@ spec:
         ]
         env:
         - name: ELASTICSEARCH_HOST
-          value: "elasticsearch"
+          value: "elasticsearch.elastic-system.svc.cluster.local"
         - name: ELASTICSEARCH_PORT
           value: "9200"
         - name: NODE_NAME
@@ -66,11 +72,12 @@ spec:
         securityContext:
           runAsUser: 0
         resources:
-          limits:
-            memory: 200Mi
           requests:
-            cpu: 100m
-            memory: 100Mi
+            memory: "100Mi"
+            cpu: "100m"
+          limits:
+            memory: "500Mi"
+            cpu: "100m"
         volumeMounts:
         - name: config
           mountPath: /etc/filebeat.yml
@@ -97,7 +104,7 @@ spec:
           path: /var/log
       - name: data
         hostPath:
-          path: /var/lib/filebeat-data
+          path: /var/lib/filebeat-data-new
           type: DirectoryOrCreate
 ---
 apiVersion: v1

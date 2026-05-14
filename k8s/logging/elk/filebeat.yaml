@@ -12,12 +12,24 @@ data:
       processors:
         - add_kubernetes_metadata:
             host: ${NODE_NAME}
+            default_indexers.enabled: true
+            default_matchers.enabled: true
             matchers:
             - logs_path:
                 logs_path: "/var/log/containers/"
+        - decode_json_fields:
+            fields: ["message"]
+            target: "app"
+            overwrite_keys: true
+            add_error_key: true
 
     output.elasticsearch:
       hosts: ['elasticsearch.elastic-system.svc.cluster.local:9200']
+      index: "turf-platform-%{+yyyy.MM.dd}"
+
+    setup.template.name: "turf-platform"
+    setup.template.pattern: "turf-platform-*"
+    setup.ilm.enabled: false
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -58,6 +70,12 @@ spec:
         - name: varlibdockercontainers
           mountPath: /var/lib/docker/containers
           readOnly: true
+        - name: varlogcontainers
+          mountPath: /var/log/containers
+          readOnly: true
+        - name: varlogpods
+          mountPath: /var/log/pods
+          readOnly: true
         - name: varlog
           mountPath: /var/log
           readOnly: true
@@ -69,6 +87,12 @@ spec:
       - name: varlibdockercontainers
         hostPath:
           path: /var/lib/docker/containers
+      - name: varlogcontainers
+        hostPath:
+          path: /var/log/containers
+      - name: varlogpods
+        hostPath:
+          path: /var/log/pods
       - name: varlog
         hostPath:
           path: /var/log
@@ -88,11 +112,29 @@ kind: ClusterRole
 metadata:
   name: filebeat
 rules:
-- apiGroups: [""] # "" indicates the core API group
+- apiGroups: [""]
   resources:
   - namespaces
   - pods
   - nodes
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups: ["apps"]
+  resources:
+  - replicasets
+  - deployments
+  - statefulsets
+  - daemonsets
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  - cronjobs
   verbs:
   - get
   - watch
