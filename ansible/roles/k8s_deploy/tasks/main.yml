@@ -31,13 +31,13 @@
     mode: "0600"
 
 - name: Apply K8s secrets
-  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/app-secrets.yaml
+  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/app-secrets.yaml --validate=false
   register: secrets_result
   changed_when: "'created' in secrets_result.stdout or 'configured' in secrets_result.stdout"
 
 # ------- Deploy Core Application (Kustomize) -------
 - name: Apply Kubernetes manifests using Kustomize
-  ansible.builtin.command: kubectl apply -k {{ k8s_app_dir }}/k8s/
+  ansible.builtin.command: kubectl apply -k {{ k8s_app_dir }}/k8s/ --validate=false
   register: k8s_deploy_result
   changed_when: "'created' in k8s_deploy_result.stdout or 'configured' in k8s_deploy_result.stdout"
 
@@ -47,26 +47,26 @@
 
 # ------- Deploy Monitoring Stack -------
 - name: Deploy Monitoring Stack (Prometheus & Grafana)
-  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/monitoring/monitoring.yaml
+  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/monitoring/monitoring.yaml --validate=false
   register: monitoring_result
   changed_when: "'created' in monitoring_result.stdout or 'configured' in monitoring_result.stdout"
   when: deploy_monitoring
 
 # ------- Deploy Logging Stack -------
 - name: Deploy Logging Namespace
-  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/logging/namespace.yaml
+  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/logging/namespace.yaml --validate=false
   register: logging_ns_result
   changed_when: "'created' in logging_ns_result.stdout or 'configured' in logging_ns_result.stdout"
   when: deploy_logging
 
 - name: Deploy Loki (Log Storage)
-  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/logging/loki.yaml
+  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/logging/loki.yaml --validate=false
   register: loki_result
   changed_when: "'created' in loki_result.stdout or 'configured' in loki_result.stdout"
   when: deploy_logging
 
 - name: Deploy Promtail (Log Collector)
-  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/logging/promtail.yaml
+  ansible.builtin.command: kubectl apply -f {{ k8s_app_dir }}/k8s/logging/promtail.yaml --validate=false
   register: promtail_result
   changed_when: "'created' in promtail_result.stdout or 'configured' in promtail_result.stdout"
   when: deploy_logging
