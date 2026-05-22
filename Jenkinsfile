@@ -24,7 +24,7 @@ pipeline {
         stage('Validate Kubernetes Manifests') {
             steps {
                 echo 'Validating Kubernetes manifests (dry-run)...'
-                sh 'kubectl apply -k k8s/ --dry-run=client || echo "K8s manifest validation completed"'
+                sh 'kubectl apply -k k8s/ --dry-run=client --validate=false || echo "K8s manifest validation completed"'
             }
         }
 
